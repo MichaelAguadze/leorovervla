@@ -1,4 +1,4 @@
-"""HTTP client for communicating with the TurboPi robot server."""
+"""HTTP client for communicating with the leorover robot server."""
 import time
 import io
 
