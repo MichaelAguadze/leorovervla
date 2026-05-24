@@ -10,7 +10,7 @@ from PIL import Image
 class RobotClient:
     """Connects to the robot server over HTTP."""
 
-    def __init__(self, robot_url: str = "http://192.168.149.1:8081",
+    def __init__(self, robot_url: str = "http://192.168.2.12:8081",
                  timeout: float = 2.0, max_retries: int = 3):
         self.robot_url = robot_url.rstrip("/")
         self.timeout = timeout
@@ -41,10 +41,7 @@ class RobotClient:
             timestamp: monotonic time from robot
             frame_index: incrementing frame counter from robot
         """
-        resp = self._request("GET", "/snapshot")
-        if resp.status_code != 200:
-            raise RuntimeError(f"Snapshot failed: HTTP {resp.status_code}")
-
+        resp = self._get_snapshot()
         timestamp = float(resp.headers.get("X-Timestamp", 0))
         frame_index = int(resp.headers.get("X-Frame-Index", 0))
 
@@ -58,15 +55,25 @@ class RobotClient:
 
         return frame, timestamp, frame_index
 
+    def _get_snapshot(self, retries: int = 10, interval: float = 0.2) -> requests.Response:
+        """Fetch /snapshot, retrying on 503 until camera warms up."""
+        for _ in range(retries):
+            resp = self._request("GET", "/snapshot")
+            if resp.status_code == 200:
+                return resp
+            if resp.status_code == 503:
+                time.sleep(interval)
+                continue
+            raise RuntimeError(f"Snapshot failed: HTTP {resp.status_code}")
+        raise RuntimeError("Camera not ready after retries (503)")
+
     def get_frame_rgb(self) -> tuple[np.ndarray, float, int]:
         """Fetch a single camera frame in RGB format (for dataset storage).
 
         Returns:
             (image_rgb, timestamp, frame_index)
         """
-        resp = self._request("GET", "/snapshot")
-        if resp.status_code != 200:
-            raise RuntimeError(f"Snapshot failed: HTTP {resp.status_code}")
+        resp = self._get_snapshot()
 
         timestamp = float(resp.headers.get("X-Timestamp", 0))
         frame_index = int(resp.headers.get("X-Frame-Index", 0))

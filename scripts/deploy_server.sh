@@ -7,13 +7,13 @@ set -euo pipefail
 #   bash scripts/deploy_server.sh [start|deploy|deps|stop|logs]
 #
 # Environment:
-#   ROBOT_IP    Robot IP address. Defaults to 192.168.149.1 for AP mode.
+#   ROBOT_IP    Robot IP address. Defaults to 192.168.2.12 for AP mode.
 #   ROBOT_USER  SSH username. Defaults to pi.
-#   ROBOT_PORT  Server port. Defaults to 8080.
+#   ROBOT_PORT  Server port. Defaults to 8081.
 
-ROBOT_IP="${ROBOT_IP:-192.168.00.137}"
+ROBOT_IP="${ROBOT_IP:-192.168.2.12}"
 ROBOT_USER="${ROBOT_USER:-pi}"
-ROBOT_PORT="${ROBOT_PORT:-8080}"
+ROBOT_PORT="${ROBOT_PORT:-8081}"
 REMOTE_DIR="/home/${ROBOT_USER}/robot_server"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"

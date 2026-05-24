@@ -50,7 +50,7 @@ pip install -r requirements-laptop.txt
 4. SSH into the robot:
 
 ```bash
-ssh pi@192.168.149.1
+ssh pi@192.168.2.12
 ```
 
 The default username is usually `pi`. Many stock images use `raspberrypi` as the password.
@@ -61,7 +61,7 @@ Once you are inside the robot:
 
 ```bash
 nmcli dev wifi list
-sudo nmcli device wifi connect "Vizuara" password "vizuara112358"
+sudo nmcli device wifi connect "wifi-name" password "wifi-password"
 ```
 
 Your SSH session will usually disconnect right away. That is normal because the robot is leaving hotspot mode and joining the shared network.
@@ -101,7 +101,7 @@ bash scripts/deploy_server.sh deps
 If the repo is already on the robot:
 
 ```bash
-python3 robot_server/server.py --port 8080
+python3 robot_server/server.py --port 8081
 ```
 
 If the repo only exists on your laptop, use the helper script from Git Bash, WSL, or another Bash shell:
@@ -296,7 +296,7 @@ python scripts/export_lerobot.py --episodes-dir data/leorover_nav/episodes --out
 Robot, when the repo is already on the robot:
 
 ```bash
-python3 robot_server/server.py --port 8080
+python3 robot_server/server.py --port 8081
 ```
 
 Laptop helper for deploying the server:

@@ -7,7 +7,7 @@ from pathlib import Path
 class RobotServerConfig:
     """Config for the robot-side HTTP server."""
     host: str = "0.0.0.0"
-    port: int = 8080
+    port: int = 8081
     camera_index: int = 0
     camera_width: int = 640
     camera_height: int = 480
@@ -21,8 +21,8 @@ class RobotServerConfig:
 class RecordingConfig:
     """Config for the laptop-side recording client."""
     # Robot connection
-    robot_ip: str = "192.168.149.1"
-    robot_port: int = 8080
+    robot_ip: str = "192.168.2.12"
+    robot_port: int = 8081
 
     # Dataset
     dataset_name: str = "leorover_nav"

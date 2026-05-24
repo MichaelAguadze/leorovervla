@@ -17,7 +17,7 @@ Endpoints:
     GET  /          — Simple status page
 
 Usage:
-    python3 server.py [--port 8080]
+    python3 server.py [--port 8081]
 """
 from __future__ import annotations
 
@@ -41,15 +41,20 @@ from health_monitor import HealthMonitor
 # --- Camera Capture Thread ---
 
 class CameraCapture:
-    """Background thread that captures camera frames."""
+    """Background thread that captures camera frames.
+
+    Tries V4L2 first. If the device opens but read() fails (RPi 5 libcamera
+    ISP nodes), falls back to picamera2 automatically.
+    """
 
     def __init__(self, device: int = 0, width: int = 640, height: int = 480,
-                 fps: int = 30, jpeg_quality: int = 70):
+                 fps: int = 30, jpeg_quality: int = 70, stream_url: str | None = None):
         self.device = device
         self.width = width
         self.height = height
         self.fps = fps
         self.jpeg_quality = jpeg_quality
+        self.stream_url = stream_url
 
         self._frame: bytes | None = None
         self._raw_frame = None
@@ -59,26 +64,102 @@ class CameraCapture:
         self._running = False
         self._thread: threading.Thread | None = None
         self._cap: cv2.VideoCapture | None = None
+        self._picam2 = None
 
     def start(self) -> bool:
         """Start camera capture. Returns True if camera opened successfully."""
-        # Kill any process holding the camera
+        if self.stream_url:
+            return self._start_stream_url(self.stream_url)
+
         os.system(f"sudo fuser -k /dev/video{self.device} 2>/dev/null")
         time.sleep(0.5)
 
-        self._cap = cv2.VideoCapture(self.device)
-        if not self._cap.isOpened():
-            print(f"[Camera] ERROR: Cannot open /dev/video{self.device}")
+        # Try V4L2 — do a test read to confirm it actually produces frames.
+        # On RPi 5, libcamera ISP nodes open without error but read() returns False.
+        cap = cv2.VideoCapture(self.device, cv2.CAP_V4L2)
+        if cap.isOpened():
+            ret, _ = cap.read()
+            if ret:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+                cap.set(cv2.CAP_PROP_FPS, self.fps)
+                actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                print(f"[Camera] Opened /dev/video{self.device} at {actual_w}x{actual_h} (V4L2)")
+                self._cap = cap
+                self._running = True
+                self._thread = threading.Thread(target=self._capture_loop, daemon=True)
+                self._thread.start()
+                return True
+            cap.release()
+            print(f"[Camera] /dev/video{self.device} opened but read() failed — trying picamera2/GStreamer")
+        else:
+            print(f"[Camera] Cannot open /dev/video{self.device} — trying picamera2/GStreamer")
+
+        if self._start_picamera2():
+            return True
+        return self._start_gstreamer_libcamera()
+
+    def _start_stream_url(self, url: str) -> bool:
+        """Read from an existing HTTP MJPEG stream (e.g. ROS web_video_server)."""
+        cap = cv2.VideoCapture(url)
+        if not cap.isOpened():
+            print(f"[Camera] Cannot open stream URL: {url}")
+            return False
+        ret, _ = cap.read()
+        if not ret:
+            cap.release()
+            print(f"[Camera] Stream URL opened but read() failed: {url}")
+            return False
+        print(f"[Camera] Opened stream URL: {url}")
+        self._cap = cap
+        self._running = True
+        self._thread = threading.Thread(target=self._capture_loop, daemon=True)
+        self._thread.start()
+        return True
+
+    def _start_picamera2(self) -> bool:
+        """Fall back to picamera2 for RPi 5 / libcamera stack."""
+        try:
+            try:
+                from picamera2 import Picamera2
+            except ImportError:
+                from picamera2.picamera2 import Picamera2
+            picam2 = Picamera2()
+            config = picam2.create_preview_configuration(
+                main={"size": (self.width, self.height), "format": "BGR888"}
+            )
+            picam2.configure(config)
+            picam2.start()
+            self._picam2 = picam2
+            print(f"[Camera] Opened via picamera2 at {self.width}x{self.height}")
+            self._running = True
+            self._thread = threading.Thread(target=self._capture_loop_picam2, daemon=True)
+            self._thread.start()
+            return True
+        except Exception as e:
+            print(f"[Camera] picamera2 failed: {e}")
             return False
 
-        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-        self._cap.set(cv2.CAP_PROP_FPS, self.fps)
-
-        actual_w = int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        actual_h = int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        print(f"[Camera] Opened /dev/video{self.device} at {actual_w}x{actual_h}")
-
+    def _start_gstreamer_libcamera(self) -> bool:
+        """Fall back to GStreamer libcamera pipeline (Ubuntu 20.04 + libcamera)."""
+        pipeline = (
+            f"libcamerasrc ! "
+            f"video/x-raw,width={self.width},height={self.height},framerate={self.fps}/1 ! "
+            f"videoconvert ! video/x-raw,format=BGR ! "
+            f"appsink max-buffers=1 drop=true"
+        )
+        cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+        if not cap.isOpened():
+            print("[Camera] GStreamer libcamera pipeline failed to open")
+            return False
+        ret, _ = cap.read()
+        if not ret:
+            cap.release()
+            print("[Camera] GStreamer pipeline opened but read() failed")
+            return False
+        print(f"[Camera] Opened via GStreamer libcamera at {self.width}x{self.height}")
+        self._cap = cap
         self._running = True
         self._thread = threading.Thread(target=self._capture_loop, daemon=True)
         self._thread.start()
@@ -91,20 +172,44 @@ class CameraCapture:
             self._thread.join(timeout=2.0)
         if self._cap:
             self._cap.release()
+        if self._picam2:
+            self._picam2.stop()
+            self._picam2.close()
 
     def _capture_loop(self) -> None:
-        """Continuously capture frames."""
+        """V4L2 capture loop."""
         while self._running:
             ret, frame = self._cap.read()
             if not ret:
                 time.sleep(0.01)
                 continue
 
-            # Encode to JPEG
             ok, jpeg = cv2.imencode(
-                ".jpg",
-                frame,
-                [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality],
+                ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality]
+            )
+            if not ok:
+                time.sleep(0.01)
+                continue
+
+            with self._lock:
+                self._frame = jpeg.tobytes()
+                self._raw_frame = frame
+                self._timestamp = time.monotonic()
+                self._frame_index += 1
+
+        print("[Camera] Capture loop ended")
+
+    def _capture_loop_picam2(self) -> None:
+        """picamera2 capture loop."""
+        while self._running:
+            try:
+                frame = self._picam2.capture_array()  # BGR888
+            except Exception:
+                time.sleep(0.01)
+                continue
+
+            ok, jpeg = cv2.imencode(
+                ".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality]
             )
             if not ok:
                 time.sleep(0.01)
@@ -313,7 +418,7 @@ def create_app(mc: MotorController, camera: CameraCapture,
 
 def main():
     parser = argparse.ArgumentParser(description="Leorover Robot Server")
-    parser.add_argument('--port', type=int, default=8080, help='HTTP port')
+    parser.add_argument('--port', type=int, default=8081, help='HTTP port')
     parser.add_argument('--camera', type=int, default=0, help='Camera device index')
     parser.add_argument('--watchdog-timeout', type=float, default=0.5,
                         help='Seconds before watchdog stops motors')
@@ -321,6 +426,9 @@ def main():
                         help='Maximum motor duty cycle')
     parser.add_argument('--jpeg-quality', type=int, default=70,
                         help='JPEG compression quality (0-100)')
+    parser.add_argument('--stream-url', type=str, default=None,
+                        help='Read camera from HTTP MJPEG URL instead of device '
+                             '(e.g. http://localhost:8080/stream?topic=/raspicam_node/image&type=mjpeg)')
     args = parser.parse_args()
 
     # Kill anything on our port
@@ -337,7 +445,8 @@ def main():
 
     # Initialize camera
     print("[Init] Camera...")
-    camera = CameraCapture(device=args.camera, jpeg_quality=args.jpeg_quality)
+    camera = CameraCapture(device=args.camera, jpeg_quality=args.jpeg_quality,
+                           stream_url=args.stream_url)
     if not camera.start():
         print("[FATAL] Camera failed to open. Exiting.")
         sys.exit(1)

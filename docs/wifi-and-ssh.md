@@ -18,7 +18,7 @@ Typical defaults on leorover Advanced images:
 
 - Hotspot name starts with `HW`
 - Hotspot password is `hiwonder`
-- Robot IP is `192.168.149.1`
+- Robot IP is `192.168.2.12`
 
 ### Shared Wi-Fi mode
 
@@ -41,7 +41,7 @@ This is the mode you want for normal development because:
 ### 2. SSH into the robot
 
 ```bash
-ssh pi@192.168.149.1
+ssh pi@192.168.2.12
 ```
 
 The username is usually `pi`. On many stock images, the password is `raspberrypi`.
@@ -124,7 +124,7 @@ Notes:
 If the robot comes back on the hotspot after a reboot:
 
 1. Rejoin the `HW` hotspot.
-2. SSH to `192.168.149.1`.
+2. SSH to `192.168.2.12`.
 3. Either run the `nmcli` connection command again or fix the persistent `wifi_conf.py` settings.
 
 ## Why We Do It This Way

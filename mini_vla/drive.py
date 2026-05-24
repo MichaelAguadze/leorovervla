@@ -21,8 +21,8 @@ from .model import load_checkpoint
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Drive leorover with Mini VLA")
-    p.add_argument("--robot-ip", default="192.168.149.1")
-    p.add_argument("--robot-port", type=int, default=8080)
+    p.add_argument("--robot-ip", default="192.168.2.12")
+    p.add_argument("--robot-port", type=int, default=8081)
     p.add_argument("--checkpoint", required=True)
     p.add_argument("--task", default=None,
                    help="Initial task (optional, defaults to first task)")

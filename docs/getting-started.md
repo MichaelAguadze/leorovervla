@@ -67,7 +67,7 @@ bash scripts/deploy_server.sh deps
 If the repo is already on the robot:
 
 ```bash
-python3 robot_server/server.py --port 8080
+python3 robot_server/server.py --port 8081
 ```
 
 If the repo only exists on your laptop, use the deploy helper from a Bash shell:
@@ -100,7 +100,7 @@ Hotspot-only quick test:
 python -m client
 ```
 
-`python -m client` uses the default AP-mode robot IP `192.168.149.1`. Once you move to shared Wi-Fi, pass `--robot-ip <ROBOT_IP>` explicitly.
+`python -m client` uses the default AP-mode robot IP `192.168.2.12`. Once you move to shared Wi-Fi, pass `--robot-ip <ROBOT_IP>` explicitly.
 
 The launcher then asks which workflow you want:
 

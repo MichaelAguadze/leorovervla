@@ -21,8 +21,8 @@ from .train import resolve_device
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Drive leorover using a trained CNN policy")
-    parser.add_argument("--robot-ip", default="192.168.149.1")
-    parser.add_argument("--robot-port", type=int, default=8080)
+    parser.add_argument("--robot-ip", default="192.168.2.12")
+    parser.add_argument("--robot-port", type=int, default=8081)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--loop-hz", type=float, default=10.0)
     parser.add_argument("--smoothing", type=float, default=0.65, help="EMA factor for previous action")

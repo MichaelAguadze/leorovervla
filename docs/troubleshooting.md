@@ -6,10 +6,10 @@
 - Make sure the robot battery is charged enough to boot cleanly.
 - If you already configured shared Wi-Fi, the robot may be trying to join that network instead of exposing the hotspot.
 
-## SSH to `192.168.149.1` fails
+## SSH to `192.168.2.12` fails
 
 - Confirm your laptop is actually connected to the `HW` hotspot.
-- Try `ping 192.168.149.1` first.
+- Try `ping 192.168.2.12` first.
 - Reboot the robot and wait for the hotspot to appear again.
 - If your image uses different defaults, check the official Hiwonder setup guide linked in the README.
 
@@ -120,7 +120,7 @@ That usually means the shared Wi-Fi settings were temporary or the persistent co
 Fix:
 
 1. Reconnect to the hotspot.
-2. SSH to `192.168.149.1`.
+2. SSH to `192.168.2.12`.
 3. Re-run the `nmcli` connection.
 4. Update `~/hiwonder-toolbox/wifi_conf.py` so shared Wi-Fi is the saved default.
 
