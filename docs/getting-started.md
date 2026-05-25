@@ -107,6 +107,12 @@ Shared-Wi-Fi mode:
 python -m client.cli --robot-ip <ROBOT_IP>
 ```
 
+With a PS5 / gamepad controller:
+
+```bash
+python -m client.cli --robot-ip <ROBOT_IP> --gamepad
+```
+
 Hotspot-only quick test:
 
 ```bash
@@ -114,6 +120,8 @@ python -m client
 ```
 
 `python -m client` uses the default AP-mode robot IP `192.168.2.12`. Once you move to shared Wi-Fi, pass `--robot-ip <ROBOT_IP>` explicitly.
+
+The `--gamepad` flag works for both `CNN-based` and `VLA-based` recording. Connect the PS5 DualSense via Bluetooth or USB before running the launcher. See [Data Collection Guide](data-collection.md#ps5--gamepad---gamepad) for the full button mapping.
 
 The launcher then asks which workflow you want:
 
@@ -209,6 +217,12 @@ Helpful notes:
 - If the packed video looks shorter than your full teleop session, that is expected. The duration is based only on accepted frames at the exported FPS.
 
 ## Useful Flags
+
+Use a PS5 / gamepad controller:
+
+```bash
+python -m client.cli --robot-ip <ROBOT_IP> --gamepad
+```
 
 Shorter collection run:
 

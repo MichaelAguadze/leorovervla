@@ -24,3 +24,7 @@ runs/
 .idea/
 .DS_Store
 Thumbs.db
+
+#random files
+docs/research_questions.tex
+research_questions/

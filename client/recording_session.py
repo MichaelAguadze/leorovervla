@@ -104,12 +104,20 @@ class RecordingSession:
         self.episode_writer.save_task_mapping(self.tasks.tasks)
         self._running = True
 
+        _gp = not isinstance(self.teleop, TeleopController)
         print("\n  Controls:")
-        print("    WASD+QE  = drive robot")
-        print("    +/-      = speed up/down")
-        print("    right    = accept episode / start recording")
-        print("    left     = discard episode")
-        print("    ESC      = stop session")
+        if _gp:
+            print("    Left stick / Right stick X  = drive robot")
+            print("    Triangle / Square            = speed up / down")
+            print("    Cross (X)                    = accept episode / start recording")
+            print("    Circle (O)                   = discard episode")
+            print("    Options                      = stop session")
+        else:
+            print("    WASD+QE  = drive robot")
+            print("    +/-      = speed up/down")
+            print("    right    = accept episode / start recording")
+            print("    left     = discard episode")
+            print("    ESC      = stop session")
 
         try:
             episode_num = 0
@@ -118,8 +126,9 @@ class RecordingSession:
                 if not self._running:
                     break
 
+                _accept_hint = "Cross (X)" if _gp else "right arrow"
                 print(
-                    "\n  Drive the robot into position, then press right arrow to start recording."
+                    f"\n  Drive the robot into position, then press {_accept_hint} to start recording."
                 )
                 self.teleop.clear_events()
                 self._drive_until_ready()
@@ -195,7 +204,8 @@ class RecordingSession:
 
     def _drive_until_ready(self) -> None:
         """Let the user drive until right arrow is pressed to start recording."""
-        print("  Driving mode - press right arrow when ready to record...\n")
+        _accept_hint = "Cross (X)" if not isinstance(self.teleop, TeleopController) else "right arrow"
+        print(f"  Driving mode - press {_accept_hint} when ready to record...\n")
         self.teleop.clear_events()
 
         while not self.teleop.events["accept_episode"] and not self.teleop.events["stop_session"]:
@@ -243,7 +253,10 @@ class RecordingSession:
         ep_idx = self.episodes.current.episode_index
         print(f"\n  RECORDING Episode {ep_idx}  [{task}]")
         print(f"    Max duration: {self.config.episode_time_s:.0f}s")
-        print("    right = accept, left = discard, ESC = stop\n")
+        if not isinstance(self.teleop, TeleopController):
+            print("    Cross (X) = accept, Circle (O) = discard, Options = stop\n")
+        else:
+            print("    right = accept, left = discard, ESC = stop\n")
 
         start_time = time.monotonic()
         frame_count = 0

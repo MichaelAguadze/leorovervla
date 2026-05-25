@@ -25,6 +25,14 @@ python -m client.cli --robot-ip <ROBOT_IP>
   -> dataset recording
 ```
 
+To use a PS5 / gamepad controller instead of the keyboard:
+
+```bash
+python -m client.cli --robot-ip <ROBOT_IP> --gamepad
+```
+
+The `--gamepad` flag works with all CNN recording. See [Data Collection Guide](data-collection.md#ps5--gamepad---gamepad) for the button mapping.
+
 The `with language intent` path is reserved for future work.
 
 ## Recording Setup

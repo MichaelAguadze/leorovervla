@@ -111,12 +111,20 @@ class CNNLoopSession:
         self.episode_writer.save_task_mapping(self.task_names)
         self._running = True
 
+        _gp = not isinstance(self.teleop, TeleopController)
         print("\n  Controls:")
-        print("    WASD+QE  = drive robot")
-        print("    +/-      = speed up/down")
-        print("    right    = start recording / accept one full lap")
-        print("    left     = discard the current lap")
-        print("    ESC      = stop session")
+        if _gp:
+            print("    Left stick / Right stick X  = drive robot")
+            print("    Triangle / Square            = speed up / down")
+            print("    Cross (X)                    = start recording / accept one full lap")
+            print("    Circle (O)                   = discard the current lap")
+            print("    Options                      = stop session")
+        else:
+            print("    WASD+QE  = drive robot")
+            print("    +/-      = speed up/down")
+            print("    right    = start recording / accept one full lap")
+            print("    left     = discard the current lap")
+            print("    ESC      = stop session")
 
         try:
             episode_num = 0
@@ -125,12 +133,13 @@ class CNNLoopSession:
                 if not self._running:
                     break
 
+                _accept_hint = "Cross (X)" if _gp else "right arrow"
                 print(
-                    "\n  Drive the robot to your desired start pose, then press right arrow to "
+                    f"\n  Drive the robot to your desired start pose, then press {_accept_hint} to "
                     "start recording."
                 )
                 print(
-                    "  Complete one full lap of your track, then press right arrow again to accept it."
+                    f"  Complete one full lap of your track, then press {_accept_hint} again to accept it."
                 )
                 self.teleop.clear_events()
                 self._drive_until_ready()
@@ -216,7 +225,8 @@ class CNNLoopSession:
 
     def _drive_until_ready(self) -> None:
         """Let the user position the robot until recording starts."""
-        print("  Driving mode - press right arrow when ready to record...\n")
+        _accept_hint = "Cross (X)" if not isinstance(self.teleop, TeleopController) else "right arrow"
+        print(f"  Driving mode - press {_accept_hint} when ready to record...\n")
         self.teleop.clear_events()
 
         while not self.teleop.events["accept_episode"] and not self.teleop.events["stop_session"]:
@@ -264,8 +274,13 @@ class CNNLoopSession:
         ep_idx = self.episodes.current.episode_index
         print(f"\n  RECORDING Episode {ep_idx}  [{direction}]")
         print(f"    Max duration: {self.config.episode_time_s:.0f}s")
-        print("    Complete one full lap of your track, then press right to accept.")
-        print("    left = discard, ESC = stop\n")
+        _gp = not isinstance(self.teleop, TeleopController)
+        if _gp:
+            print("    Complete one full lap, then press Cross (X) to accept.")
+            print("    Circle (O) = discard, Options = stop\n")
+        else:
+            print("    Complete one full lap of your track, then press right to accept.")
+            print("    left = discard, ESC = stop\n")
 
         start_time = time.monotonic()
         frame_count = 0

@@ -9,6 +9,7 @@ If you are building the separate CNN workflow, see [CNN Dataset And Training Gui
 The committed code supports:
 
 - keyboard teleoperation from the laptop
+- PS5 / gamepad teleoperation via the `--gamepad` flag
 - teleop-only driving without recording
 - launcher-based routing into `CNN-based` or `VLA-based` recording
 - live frame capture from the robot over HTTP
@@ -31,6 +32,12 @@ If you only want to drive the robot and not save data yet:
 python -m client.teleop --robot-ip <ROBOT_IP>
 ```
 
+With a PS5 controller:
+
+```bash
+python -m client.teleop --robot-ip <ROBOT_IP> --gamepad
+```
+
 That is useful for:
 
 - checking that the server is running
@@ -47,10 +54,22 @@ When you are ready to record:
 python -m client.cli --robot-ip <ROBOT_IP>
 ```
 
-For AP-mode testing:
+With a PS5 controller:
+
+```bash
+python -m client.cli --robot-ip <ROBOT_IP> --gamepad
+```
+
+For AP-mode testing (keyboard):
 
 ```bash
 python -m client
+```
+
+For AP-mode testing with a gamepad:
+
+```bash
+python -m client --gamepad
 ```
 
 After launch:
@@ -60,12 +79,28 @@ After launch:
 
 ## Controls
 
+### Keyboard (default)
+
 - `W`, `A`, `S`, `D`: drive forward, left, backward, right
 - `Q`, `E`: rotate
 - `+`, `-`: increase or decrease teleop speed
 - right arrow: start recording after positioning, or accept the current episode
 - left arrow: discard the current episode
 - `Esc`: stop the full session
+
+### PS5 / Gamepad (`--gamepad`)
+
+- Left stick (Y axis): forward / backward
+- Left stick (X axis): strafe left / right
+- Right stick (X axis): rotate
+- Triangle / Square: speed up / speed down
+- Cross (X): start recording after positioning, or accept the current episode
+- Circle (O): discard the current episode
+- Options: stop the full session
+
+The gamepad controller requires `pygame`. It is already listed in `requirements-laptop.txt`. Connect the PS5 DualSense via Bluetooth or USB before starting the session.
+
+The `--gamepad` flag works with both `CNN-based` and `VLA-based` recording and with the standalone `python -m client.teleop` command.
 
 ## Default Tasks
 
@@ -241,6 +276,8 @@ python scripts/inspect_episode.py \
 
 - Start with a lower teleop speed until the controls feel natural.
 - Charge the battery before long recording sessions.
-- Run the client on the local laptop session, not inside a remote SSH shell, because `pynput` listens for local keyboard events.
-- If a Wi-Fi hiccup causes motor commands to fail, the recorder now skips those frames instead of silently saving bad action labels.
+- Run the client on the local laptop session, not inside a remote SSH shell, because `pynput` (keyboard) and `pygame` (gamepad) listen for local input events.
+- If a Wi-Fi hiccup causes motor commands to fail, the recorder skips those frames instead of silently saving bad action labels.
+- Gamepad inputs are analog and produce smoother trajectories than keyboard inputs. For best data quality, use the gamepad.
+- On macOS, SDL2 requires pygame to run on the main thread. The gamepad controller is written for this — do not call it from a background thread.
 - Validation-only folders such as `data/workflow_validation/` are disposable and can be deleted after you confirm the pipeline works.

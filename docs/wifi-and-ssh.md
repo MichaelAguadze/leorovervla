@@ -140,5 +140,5 @@ Once both devices are on the same network, you can SSH, install packages, start 
 
 ## References
 
-- [Hiwonder leorover network setup](https://docs.hiwonder.com/projects/leorover/en/advanced/docs/7.network_configuration.html)
-- [Hiwonder leorover getting ready](https://docs.hiwonder.com/projects/leorover/en/latest/docs/1.getting_ready.html)
+- [Leorover network setup](https://)
+- [Leorover getting ready](https://)
