@@ -64,19 +64,32 @@ bash scripts/deploy_server.sh deps
 
 ## Start the Robot Server
 
+The leorover image runs ROS Noetic with `raspicam_node` and `web_video_server`
+on port 8080. Pass `--stream-url` so the server reads the camera from that
+existing ROS stream instead of trying to open the device directly.
+
 If the repo is already on the robot:
 
 ```bash
-python3 robot_server/server.py --port 8081
+python3 robot_server/server.py --port 8081 \
+  --stream-url 'http://localhost:8080/stream?topic=/camera/image_raw&type=mjpeg'
 ```
 
-If the repo only exists on your laptop, use the deploy helper from a Bash shell:
+If the repo only exists on your laptop, deploy and start from a Bash shell:
 
 ```bash
 bash scripts/deploy_server.sh start
 ```
 
 Windows users can run that from Git Bash or WSL.
+
+Verify the server is up:
+
+```bash
+curl http://192.168.2.12:8081/health
+```
+
+You should see `"camera_ok": true` in the response.
 
 ## Start the Laptop Client
 

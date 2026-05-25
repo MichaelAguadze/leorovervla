@@ -8,7 +8,7 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/robot_server
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/bin/bash -lc 'exec /usr/bin/python3 /home/pi/robot_server/server.py --port 8081 >> /tmp/robot_server.log 2>&1'
+ExecStart=/bin/bash -lc 'exec /usr/bin/python3 /home/pi/robot_server/server.py --port 8081 --stream-url "http://localhost:8080/stream?topic=/camera/image_raw&type=mjpeg" >> /tmp/robot_server.log 2>&1'
 Restart=always
 RestartSec=2
 
