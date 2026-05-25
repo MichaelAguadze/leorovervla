@@ -37,7 +37,8 @@ def _flush_stdin() -> None:
 class RecordingSession:
     """Orchestrates the full recording session."""
 
-    def __init__(self, config: RecordingConfig, tasks: TaskManager | None = None):
+    def __init__(self, config: RecordingConfig, tasks: TaskManager | None = None,
+                 teleop=None):
         self.config = config
         self.tasks = tasks or TaskManager()
 
@@ -48,7 +49,7 @@ class RecordingSession:
             timeout=0.5,
             max_retries=1,
         )
-        self.teleop = TeleopController(
+        self.teleop = teleop or TeleopController(
             speed=config.teleop_speed,
             max_speed=config.max_duty,
         )

@@ -45,7 +45,7 @@ def _flush_stdin() -> None:
 class CNNLoopSession:
     """Record no-language path-following data for CNN behavior cloning."""
 
-    def __init__(self, config: RecordingConfig):
+    def __init__(self, config: RecordingConfig, teleop=None):
         self.config = config
         self.config.dataset_dir.mkdir(parents=True, exist_ok=True)
 
@@ -54,7 +54,7 @@ class CNNLoopSession:
             timeout=0.5,
             max_retries=1,
         )
-        self.teleop = TeleopController(
+        self.teleop = teleop or TeleopController(
             speed=config.teleop_speed,
             max_speed=config.max_duty,
         )

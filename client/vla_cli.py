@@ -25,7 +25,12 @@ def run_from_args(args: Namespace) -> None:
         data_dir=Path(args.data_dir),
     )
 
+    teleop = None
+    if getattr(args, "gamepad", False):
+        from .gamepad_controller import GamepadController
+        teleop = GamepadController(speed=config.teleop_speed, max_speed=config.max_duty)
+
     tasks = TaskManager(args.tasks if args.tasks else DEFAULT_TASKS)
-    session = RecordingSession(config, tasks)
+    session = RecordingSession(config, tasks, teleop=teleop)
     session.run()
 

@@ -21,6 +21,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Maximum teleop speed in duty units")
     parser.add_argument("--loop-hz", type=float, default=10.0,
                         help="How often to send velocity commands")
+    parser.add_argument("--gamepad", action="store_true",
+                        help="Use PS5/gamepad controller instead of keyboard")
     return parser
 
 
@@ -68,10 +70,11 @@ def main() -> None:
         timeout=1.0,
         max_retries=2,
     )
-    teleop = TeleopController(
-        speed=args.speed,
-        max_speed=args.max_duty,
-    )
+    if args.gamepad:
+        from .gamepad_controller import GamepadController
+        teleop = GamepadController(speed=args.speed, max_speed=args.max_duty)
+    else:
+        teleop = TeleopController(speed=args.speed, max_speed=args.max_duty)
 
     print()
     print("=" * 50)
@@ -97,11 +100,18 @@ def main() -> None:
     )
     print()
     print("  Controls:")
-    print("    WASD  = translate")
-    print("    Q/E   = rotate")
-    print("    +/-   = speed up/down")
-    print("    Space = stop movement")
-    print("    Esc   = exit teleop")
+    if args.gamepad:
+        print("    Left stick   = forward / strafe")
+        print("    Right stick  = rotate")
+        print("    Triangle/Sq  = speed up / down")
+        print("    Cross (X)    = confirm")
+        print("    Options      = exit teleop")
+    else:
+        print("    WASD  = translate")
+        print("    Q/E   = rotate")
+        print("    +/-   = speed up/down")
+        print("    Space = stop movement")
+        print("    Esc   = exit teleop")
     print()
 
     teleop.start()

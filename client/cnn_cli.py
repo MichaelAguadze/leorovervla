@@ -34,7 +34,12 @@ def _run_cnn_dataset_recording(args: Namespace) -> None:
         teleop_speed=args.speed,
         data_dir=Path(args.data_dir),
     )
-    session = CNNLoopSession(config)
+    teleop = None
+    if getattr(args, "gamepad", False):
+        from .gamepad_controller import GamepadController
+        teleop = GamepadController(speed=args.speed, max_speed=config.max_duty)
+
+    session = CNNLoopSession(config, teleop=teleop)
     session.run()
 
 
