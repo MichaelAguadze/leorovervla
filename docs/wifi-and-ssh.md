@@ -17,7 +17,7 @@ In AP mode, the robot creates its own hotspot. This is useful when you first pow
 Typical defaults on leorover Advanced images:
 
 - Hotspot name starts with `HW`
-- Hotspot password is `hiwonder`
+- Hotspot password is `Leorover`
 - Robot IP is `192.168.2.12`
 
 ### Shared Wi-Fi mode
@@ -95,7 +95,7 @@ After the first successful `nmcli` connection, you can make the shared Wi-Fi con
 On the robot:
 
 ```bash
-cd ~/hiwonder-toolbox
+cd ~/Leorover-toolbox
 sudo nano wifi_conf.py
 ```
 

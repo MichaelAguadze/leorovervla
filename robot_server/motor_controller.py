@@ -37,7 +37,7 @@ _MAX_ANGULAR_RDS = 1.0   # rad/s at duty == max_duty
 _WHEEL_RADIUS_M  = 0.065 # metres — used to convert linear m/s → wheel rad/s
 
 
-def mecanum_ik(vx: float, vy: float, omega: float) -> list[list]:
+def diffdrive_ik(vx: float, vy: float, omega: float) -> list[list]:
     """Return per-wheel duty values for logging compatibility.
 
     Leo Rover firmware handles the actual IK via /cmd_vel, so this is only
@@ -135,7 +135,7 @@ class MotorController:
             self._cmd_vel_pub.publish(twist)
             self._last_command_time = time.monotonic()
 
-        return mecanum_ik(vx, vy, omega)
+        return diffdrive_ik(vx, vy, omega)
 
     def set_raw_wheels(self, wheels: list[list]) -> None:
         """Send per-wheel velocity commands.
