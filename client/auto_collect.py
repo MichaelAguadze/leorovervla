@@ -31,7 +31,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # Dataset
     ds = p.add_argument_group("dataset")
-    ds.add_argument("--dataset",  default="leorover_cnn_auto",
+    ds.add_argument("--dataset",  default="leorover_cnn",
                     help="Dataset name (subdirectory under --data-dir)")
     ds.add_argument("--data-dir", default="data")
     ds.add_argument("--episodes", type=int, default=20,
@@ -43,11 +43,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # Timing
     timing = p.add_argument_group("timing")
-    timing.add_argument("--lap-time",            type=float, default=60.0,
+    timing.add_argument("--lap-time",            type=float, default=46.0,
                         help="Seconds per lap before auto-accept")
     timing.add_argument("--arm-delay",           type=float, default=5.0,
                         help="Countdown seconds before each lap starts")
-    timing.add_argument("--line-lost-tolerance", type=float, default=1.5,
+    timing.add_argument("--line-lost-tolerance", type=float, default=3.0,
                         help="Seconds of missing line before discarding an episode")
 
     # PD gains
@@ -58,9 +58,19 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="Derivative gain for omega")
     pd.add_argument("--base-speed", type=float, default=35.0,
                     help="Base forward speed in duty-cycle units (0–80)")
-    pd.add_argument("--speed-damp", type=float, default=0.5,
+    pd.add_argument("--speed-damp",   type=float, default=0.5,
                     help="Speed reduction fraction at max error (0=none, 1=full stop)")
-    pd.add_argument("--max-duty",   type=float, default=80.0,
+    pd.add_argument("--coast-factor",         type=float, default=0.6,
+                    help="Power fraction to replay last omega when coasting a curve")
+    pd.add_argument("--corner-omega",         type=float, default=None,
+                    help="Fixed omega duty at corners (auto-derived from --direction if omitted; "
+                         "negative=right/CW, positive=left/CCW)")
+    pd.add_argument("--coast-omega-threshold",     type=float, default=5.0,
+                    help="|last_omega| below this triggers corner mode instead of coasting")
+    pd.add_argument("--corner-approach-threshold", type=float, default=0.75,
+                    help="Centroid error magnitude at which predictive corner turn starts "
+                         "(0–1, lower = earlier trigger)")
+    pd.add_argument("--max-duty",             type=float, default=80.0,
                     help="Duty-cycle ceiling for all commands")
 
     # Detection
@@ -101,11 +111,25 @@ def main() -> None:
         roi_top_fraction=args.roi_top,
         min_contour_area=args.min_contour,
     )
+    # Auto-derive corner_omega from direction unless the user overrides it.
+    # Clockwise path → right turns at corners → negative omega.
+    # Counterclockwise path → left turns at corners → positive omega.
+    if args.corner_omega is not None:
+        corner_omega = args.corner_omega
+    elif args.direction == "clockwise":
+        corner_omega = -args.max_duty * 0.5
+    else:
+        corner_omega = args.max_duty * 0.5
+
     controller = LinePDController(
         Kp=args.Kp,
         Kd=args.Kd,
         base_speed=args.base_speed,
         speed_damp=args.speed_damp,
+        coast_factor=args.coast_factor,
+        corner_omega=corner_omega,
+        coast_omega_threshold=args.coast_omega_threshold,
+        corner_approach_threshold=args.corner_approach_threshold,
         max_duty=args.max_duty,
     )
 

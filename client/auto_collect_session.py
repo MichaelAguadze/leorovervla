@@ -46,9 +46,9 @@ class AutoCollectSession:
         self,
         config: RecordingConfig,
         direction: str = "clockwise",
-        lap_time_s: float = 60.0,
+        lap_time_s: float = 46.0,
         arm_delay_s: float = 5.0,
-        line_lost_tolerance_s: float = 1.5,
+        line_lost_tolerance_s: float = 3.0,
         detector: LineDetector | None = None,
         controller: LinePDController | None = None,
     ):
