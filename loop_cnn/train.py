@@ -206,7 +206,7 @@ def evaluate_model(model: nn.Module, loader: DataLoader | None, criterion: nn.Mo
         batch_size = images.shape[0]
         total_loss += float(loss.item()) * batch_size
         total_examples += batch_size
-        abs_error += torch.abs(preds - targets).sum(dim=0).double().cpu()
+        abs_error += torch.abs(preds - targets).sum(dim=0).float().cpu()
 
     if total_examples == 0:
         return {"loss": math.nan, "mae_vx": math.nan, "mae_vy": math.nan, "mae_omega": math.nan}
@@ -260,7 +260,7 @@ def evaluate_model_with_progress(
             batch_size = images.shape[0]
             total_loss += float(loss.item()) * batch_size
             total_examples += batch_size
-            abs_error += torch.abs(preds - targets).sum(dim=0).double().cpu()
+            abs_error += torch.abs(preds - targets).sum(dim=0).float().cpu()
 
             elapsed = max(time.perf_counter() - start_time, 1e-6)
             bar.update(batch_size)
@@ -325,7 +325,7 @@ def train_epoch(
             batch_size = images.shape[0]
             total_loss += float(loss.item()) * batch_size
             total_examples += batch_size
-            abs_error += torch.abs(preds.detach() - targets).sum(dim=0).double().cpu()
+            abs_error += torch.abs(preds.detach() - targets).sum(dim=0).float().cpu()
 
             if bar is not None:
                 elapsed = max(time.perf_counter() - start_time, 1e-6)
