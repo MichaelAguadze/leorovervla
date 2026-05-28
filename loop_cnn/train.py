@@ -26,7 +26,7 @@ from . import (
     LEGACY_DATA_ROOT,
 )
 from .dataset import build_datasets
-from .model import LoopPolicyConfig, build_model, save_checkpoint
+from .model import LoopPolicyConfig, build_model, load_checkpoint, save_checkpoint
 
 
 def resolve_run_dir(base_dir: Path) -> Path:
@@ -99,11 +99,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--val-ratio", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num-workers", type=int, default=0)
-    parser.add_argument("--device", default="auto")
+    parser.add_argument(
+        "--device",
+        default="auto",
+        help="Compute device: 'auto' (default), 'cuda', 'cuda:N', 'mps', or 'cpu'",
+    )
     parser.add_argument("--frame-history", type=int, default=DEFAULT_FRAME_HISTORY)
     parser.add_argument("--image-width", type=int, default=DEFAULT_IMAGE_WIDTH)
     parser.add_argument("--image-height", type=int, default=DEFAULT_IMAGE_HEIGHT)
     parser.add_argument("--huber-delta", type=float, default=1.0)
+    parser.add_argument("--resume", type=str, default=None,
+                        metavar="CHECKPOINT",
+                        help="Path to a best.pt/last.pt checkpoint to warm-start weights from.")
     parser.add_argument("--no-progress", action="store_true",
                         help="Disable tqdm progress bars")
     return parser
@@ -111,11 +118,36 @@ def build_parser() -> argparse.ArgumentParser:
 
 def resolve_device(requested: str) -> torch.device:
     if requested != "auto":
-        return torch.device(requested)
+        device = torch.device(requested)
+        print(f"[train] Using requested device: {device}")
+        return device
     if torch.cuda.is_available():
-        return torch.device("cuda")
-    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():  # pragma: no cover
+        device = torch.device("cuda")
+        n = torch.cuda.device_count()
+        names = ", ".join(torch.cuda.get_device_name(i) for i in range(n))
+        print(f"[train] Auto-selected device: {device} ({n}x {names})")
+        return device
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        print("[train] Auto-selected device: mps (Apple Silicon GPU)")
         return torch.device("mps")
+    print("[train] Auto-selected device: cpu (no GPU found)")
+    return torch.device("cpu")
+
+
+def resolve_inference_device(requested: str) -> torch.device:
+    """Like resolve_device but prefers MPS over CUDA for low-latency inference."""
+    if requested != "auto":
+        device = torch.device(requested)
+        print(f"[infer] Using requested device: {device}")
+        return device
+    if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        print("[infer] Auto-selected device: mps (Apple Silicon GPU)")
+        return torch.device("mps")
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"[infer] Auto-selected device: {device} ({torch.cuda.get_device_name(device)})")
+        return device
+    print("[infer] Auto-selected device: cpu")
     return torch.device("cpu")
 
 
@@ -378,6 +410,17 @@ def main() -> None:
         frame_history=args.frame_history,
     )
     model = build_model(model_config).to(device)
+    if args.resume:
+        resume_path = Path(args.resume)
+        if not resume_path.exists():
+            raise FileNotFoundError(f"--resume checkpoint not found: {resume_path}")
+        _, payload = load_checkpoint(resume_path, map_location=device)
+        model.load_state_dict(payload["model_state_dict"])
+        print(f"[train] Warm-started weights from {resume_path} (epoch {payload.get('epoch', '?')})")
+    n_gpus = torch.cuda.device_count() if device.type == "cuda" else 0
+    if n_gpus > 1:
+        model = nn.DataParallel(model)
+        print(f"[train] DataParallel across {n_gpus} GPUs (batch size {args.batch_size} → {args.batch_size // n_gpus} per GPU)")
     criterion = nn.HuberLoss(delta=args.huber_delta)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, args.epochs))
@@ -456,9 +499,10 @@ def main() -> None:
                 "image_size": [args.image_width, args.image_height],
             }
 
+            raw_model = model.module if isinstance(model, nn.DataParallel) else model
             save_checkpoint(
                 checkpoint_dir / "last.pt",
-                model,
+                raw_model,
                 epoch=epoch,
                 metrics=record,
                 extra=checkpoint_extra,
@@ -470,7 +514,7 @@ def main() -> None:
                 best_epoch = epoch
                 save_checkpoint(
                     checkpoint_dir / "best.pt",
-                    model,
+                    raw_model,
                     epoch=epoch,
                     metrics=record,
                     extra=checkpoint_extra,

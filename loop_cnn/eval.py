@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from . import DEFAULT_DATA_ROOT, LEGACY_DATA_ROOT
 from .dataset import LoopEpisodeDataset
 from .model import load_checkpoint
-from .train import evaluate_model, resolve_device
+from .train import evaluate_model, resolve_inference_device
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -55,7 +55,7 @@ def build_loader(
 
 def main() -> None:
     args = build_parser().parse_args()
-    device = resolve_device(args.device)
+    device = resolve_inference_device(args.device)
     model, payload = load_checkpoint(Path(args.checkpoint), map_location=device)
     model = model.to(device)
 

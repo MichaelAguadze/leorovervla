@@ -16,7 +16,7 @@ from torchvision.transforms import functional as TF
 from client.robot_client import RobotClient
 
 from .model import load_checkpoint
-from .train import resolve_device
+from .train import resolve_inference_device
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,7 +48,7 @@ def frame_to_tensor(frame: np.ndarray, *, image_width: int, image_height: int) -
 
 def main() -> None:
     args = build_parser().parse_args()
-    device = resolve_device(args.device)
+    device = resolve_inference_device(args.device)
     model, payload = load_checkpoint(Path(args.checkpoint), map_location=device)
     model = model.to(device)
     model.eval()
