@@ -25,7 +25,7 @@ from . import (
     DEFAULT_IMAGE_WIDTH,
     LEGACY_DATA_ROOT,
 )
-from .dataset import build_datasets
+from .dataset import build_datasets, build_experiment_datasets
 from .model import LoopPolicyConfig, build_model, save_checkpoint
 
 
@@ -70,6 +70,12 @@ def write_training_summary(
         "history": history,
         "interrupted": interrupted,
     }
+    if getattr(args, "max_white_episodes", None) is not None:
+        summary["max_white_episodes"] = args.max_white_episodes
+    if getattr(args, "finetune_from", None) is not None:
+        summary["finetune_from"] = str(args.finetune_from)
+    if getattr(args, "freeze_encoder_blocks", 0):
+        summary["freeze_encoder_blocks"] = args.freeze_encoder_blocks
     with path.open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)
 
@@ -106,6 +112,29 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--huber-delta", type=float, default=1.0)
     parser.add_argument("--no-progress", action="store_true",
                         help="Disable tqdm progress bars")
+    parser.add_argument("--tape-color",
+                        choices=["red", "blue", "green", "white"],
+                        default=None,
+                        help="Only train on episodes collected with this tape color "
+                             "(reads tape_color from episode_info.json). "
+                             "Omit to use all episodes in --episodes-dir.")
+    parser.add_argument("--use-masked-video", action="store_true",
+                        help="Load video_masked.mp4 instead of video.mp4 for each episode. "
+                             "Requires running `python -m loop_cnn.segment` first.")
+    parser.add_argument("--finetune-from", default=None, metavar="CHECKPOINT",
+                        help="Load weights from this .pt checkpoint before training "
+                             "(fine-tuning from a pre-trained policy).")
+    parser.add_argument("--max-white-episodes", type=int, default=None, metavar="N",
+                        help="Cap white tape training episodes at N and enable experiment "
+                             "mode: trains on all red + N white episodes and reports "
+                             "per-color (val_loss_red / val_loss_white) each epoch.")
+    parser.add_argument("--freeze-encoder-blocks", type=int, default=0, metavar="N",
+                        choices=[0, 1, 2, 3, 4],
+                        help="Freeze the first N encoder ConvBlocks during fine-tuning "
+                             "(0=none, 4=all). Frozen blocks stay in eval mode so BatchNorm "
+                             "uses running statistics rather than batch statistics. "
+                             "Useful when --finetune-from is set: higher values preserve "
+                             "geometry features at the cost of reduced color adaptation.")
     return parser
 
 
@@ -137,6 +166,8 @@ def build_loaders(
     frame_history: int,
     image_width: int,
     image_height: int,
+    tape_color: str | None = None,
+    use_masked_video: bool = False,
 ) -> tuple[DataLoader, DataLoader | None, list[str], list[str]]:
     train_dataset, val_dataset = build_datasets(
         episodes_dir=episodes_dir,
@@ -144,6 +175,8 @@ def build_loaders(
         history=frame_history,
         val_ratio=val_ratio,
         seed=seed,
+        tape_color=tape_color,
+        use_masked_video=use_masked_video,
     )
     if len(train_dataset) == 0:
         raise RuntimeError(f"No CNN episodes found under {episodes_dir}")
@@ -186,6 +219,78 @@ def build_loaders(
     train_sessions = sorted({record.session_name for record in train_dataset.records})
     val_sessions = sorted({record.session_name for record in val_dataset.records})
     return train_loader, val_loader, train_sessions, val_sessions
+
+
+def build_experiment_loaders(
+    episodes_dir: Path,
+    *,
+    max_white_episodes: int,
+    val_ratio: float,
+    seed: int,
+    batch_size: int,
+    num_workers: int,
+    frame_history: int,
+    image_width: int,
+    image_height: int,
+) -> tuple[DataLoader, DataLoader | None, DataLoader | None, DataLoader | None, list[str], list[str]]:
+    """Build loaders for mixed red+white experiment.
+
+    Returns:
+        (train_loader, val_loader_all, val_loader_red, val_loader_white, train_sessions, val_sessions)
+    """
+    train_ds, val_ds_all, val_ds_red, val_ds_white = build_experiment_datasets(
+        episodes_dir=episodes_dir,
+        max_white_train_episodes=max_white_episodes,
+        image_size=(image_width, image_height),
+        history=frame_history,
+        val_ratio=val_ratio,
+        seed=seed,
+    )
+    if len(train_ds) == 0:
+        raise RuntimeError(f"No training episodes found under {episodes_dir}")
+
+    n_red = sum(1 for r in train_ds.records if r.tape_color == "red")
+    n_white = sum(1 for r in train_ds.records if r.tape_color == "white")
+    print(f"[train] Experiment mode: {n_red} red + {n_white} white train episodes "
+          f"({max_white_episodes} white cap)")
+
+    preload_threshold = 25000
+    preload_recs = 64
+    if len(train_ds.records) <= preload_recs and train_ds.total_frames <= preload_threshold:
+        print(f"[train] Preloading {len(train_ds.records)} train episodes into RAM.")
+        train_ds.preload_all()
+        for ds in (val_ds_all, val_ds_red, val_ds_white):
+            if ds.records:
+                ds.preload_all()
+
+    def _loader(dataset, *, weighted: bool = False) -> DataLoader | None:
+        if len(dataset) == 0:
+            return None
+        return DataLoader(
+            dataset,
+            batch_size=batch_size,
+            sampler=(
+                WeightedRandomSampler(
+                    weights=torch.as_tensor(dataset.sample_weights, dtype=torch.double),
+                    num_samples=len(dataset.sample_weights),
+                    replacement=True,
+                )
+                if weighted else None
+            ),
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=torch.cuda.is_available(),
+            persistent_workers=num_workers > 0,
+        )
+
+    train_loader = _loader(train_ds, weighted=True)
+    val_loader_all = _loader(val_ds_all)
+    val_loader_red = _loader(val_ds_red)
+    val_loader_white = _loader(val_ds_white)
+
+    train_sessions = sorted({r.session_name for r in train_ds.records})
+    val_sessions = sorted({r.session_name for r in val_ds_all.records})
+    return train_loader, val_loader_all, val_loader_red, val_loader_white, train_sessions, val_sessions
 
 
 @torch.no_grad()
@@ -294,8 +399,14 @@ def train_epoch(
     epochs: int,
     lr: float,
     show_progress: bool,
+    freeze_encoder_blocks: int = 0,
 ) -> dict[str, float]:
     model.train()
+    # Re-apply eval mode to frozen encoder blocks so their BatchNorm layers keep
+    # using running statistics (fixed during fine-tuning) rather than batch statistics.
+    if freeze_encoder_blocks > 0 and hasattr(model, "encoder"):
+        for i in range(min(freeze_encoder_blocks, 4)):
+            model.encoder[i].eval()
     total_loss = 0.0
     total_examples = 0
     abs_error = torch.zeros(3, dtype=torch.float64)
@@ -361,16 +472,37 @@ def main() -> None:
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     summary_path = run_dir / "training_summary.json"
 
-    train_loader, val_loader, train_sessions, val_sessions = build_loaders(
-        episodes_dir,
-        val_ratio=args.val_ratio,
-        seed=args.seed,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        frame_history=args.frame_history,
-        image_width=args.image_width,
-        image_height=args.image_height,
-    )
+    experiment_mode = args.max_white_episodes is not None
+    val_loader_red: DataLoader | None = None
+    val_loader_white: DataLoader | None = None
+
+    if experiment_mode:
+        train_loader, val_loader, val_loader_red, val_loader_white, train_sessions, val_sessions = (
+            build_experiment_loaders(
+                episodes_dir,
+                max_white_episodes=args.max_white_episodes,
+                val_ratio=args.val_ratio,
+                seed=args.seed,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                frame_history=args.frame_history,
+                image_width=args.image_width,
+                image_height=args.image_height,
+            )
+        )
+    else:
+        train_loader, val_loader, train_sessions, val_sessions = build_loaders(
+            episodes_dir,
+            val_ratio=args.val_ratio,
+            seed=args.seed,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            frame_history=args.frame_history,
+            image_width=args.image_width,
+            tape_color=args.tape_color,
+            image_height=args.image_height,
+            use_masked_video=args.use_masked_video,
+        )
 
     model_config = LoopPolicyConfig(
         image_width=args.image_width,
@@ -378,8 +510,25 @@ def main() -> None:
         frame_history=args.frame_history,
     )
     model = build_model(model_config).to(device)
+
+    if args.finetune_from:
+        _payload = torch.load(Path(args.finetune_from), map_location=device, weights_only=False)
+        model.load_state_dict(_payload["model_state_dict"])
+        print(f"[train] Fine-tuning from {args.finetune_from} (source epoch {_payload.get('epoch', '?')})")
+
+    n_freeze = args.freeze_encoder_blocks
+    if n_freeze > 0:
+        _n = min(n_freeze, 4)
+        for i in range(_n):
+            for param in model.encoder[i].parameters():
+                param.requires_grad = False
+        n_frozen = sum(not p.requires_grad for p in model.parameters())
+        n_total = sum(1 for _ in model.parameters())
+        print(f"[train] Frozen encoder blocks 0–{_n - 1}  ({n_frozen}/{n_total} parameters frozen)")
+
     criterion = nn.HuberLoss(delta=args.huber_delta)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    trainable_params = [p for p in model.parameters() if p.requires_grad]
+    optimizer = torch.optim.AdamW(trainable_params, lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(1, args.epochs))
 
     if val_loader is None:
@@ -413,6 +562,7 @@ def main() -> None:
                 epochs=args.epochs,
                 lr=current_lr,
                 show_progress=not args.no_progress,
+                freeze_encoder_blocks=args.freeze_encoder_blocks,
             )
             val_metrics = (
                 evaluate_model_with_progress(
@@ -426,9 +576,17 @@ def main() -> None:
                 )
                 if val_loader is not None else train_metrics
             )
+            val_red_metrics = (
+                evaluate_model(model, val_loader_red, criterion, device)
+                if val_loader_red is not None else None
+            )
+            val_white_metrics = (
+                evaluate_model(model, val_loader_white, criterion, device)
+                if val_loader_white is not None else None
+            )
             scheduler.step()
 
-            record = {
+            record: dict[str, float] = {
                 "epoch": epoch,
                 "train_loss": train_metrics["loss"],
                 "train_mae_vx": train_metrics["mae_vx"],
@@ -440,14 +598,32 @@ def main() -> None:
                 "val_mae_omega": val_metrics["mae_omega"],
                 "lr": float(optimizer.param_groups[0]["lr"]),
             }
+            if val_red_metrics is not None:
+                record.update({
+                    "val_loss_red": val_red_metrics["loss"],
+                    "val_mae_red_vx": val_red_metrics["mae_vx"],
+                    "val_mae_red_omega": val_red_metrics["mae_omega"],
+                })
+            if val_white_metrics is not None:
+                record.update({
+                    "val_loss_white": val_white_metrics["loss"],
+                    "val_mae_white_vx": val_white_metrics["mae_vx"],
+                    "val_mae_white_omega": val_white_metrics["mae_omega"],
+                })
             history.append(record)
 
-            print(
+            msg = (
                 f"[train] epoch {epoch:03d} "
                 f"train_loss={record['train_loss']:.4f} "
                 f"val_loss={record['val_loss']:.4f} "
                 f"val_mae=[{record['val_mae_vx']:.4f}, {record['val_mae_vy']:.4f}, {record['val_mae_omega']:.4f}]"
             )
+            if experiment_mode:
+                msg += (
+                    f" | red={record.get('val_loss_red', float('nan')):.4f}"
+                    f" white={record.get('val_loss_white', float('nan')):.4f}"
+                )
+            print(msg)
 
             checkpoint_extra = {
                 "train_sessions": train_sessions,

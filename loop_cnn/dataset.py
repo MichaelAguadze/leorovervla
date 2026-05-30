@@ -33,6 +33,7 @@ class EpisodeRecord:
     num_frames: int
     task: str
     direction: str
+    tape_color: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -43,8 +44,19 @@ class SampleIndex:
     frame_idx: int
 
 
-def discover_cnn_episodes(episodes_dir: Path) -> list[EpisodeRecord]:
-    """Discover saved CNN episodes and their directions."""
+def discover_cnn_episodes(
+    episodes_dir: Path,
+    tape_color: str | None = None,
+) -> list[EpisodeRecord]:
+    """Discover saved CNN episodes and their directions.
+
+    Args:
+        episodes_dir: Root directory to search for episode_* subdirectories.
+        tape_color: If provided, only episodes with a matching tape_color in
+                    episode_info.json are returned. Episodes that predate the
+                    tape_color field are treated as color "unknown" and excluded
+                    when a filter is active.
+    """
     records: list[EpisodeRecord] = []
     for episode_dir in sorted(Path(episodes_dir).glob("**/episode_*")):
         if not episode_dir.is_dir():
@@ -60,6 +72,10 @@ def discover_cnn_episodes(episodes_dir: Path) -> list[EpisodeRecord]:
             continue
 
         info = pd.read_json(info_path, typ="series")
+        color = str(info.get("tape_color", "unknown"))
+        if tape_color is not None and color != tape_color:
+            continue
+
         records.append(
             EpisodeRecord(
                 episode_dir=episode_dir,
@@ -67,6 +83,7 @@ def discover_cnn_episodes(episodes_dir: Path) -> list[EpisodeRecord]:
                 num_frames=len(df),
                 task=str(df["task"].iloc[0]),
                 direction=str(info.get("direction", "unknown")),
+                tape_color=color,
             )
         )
     return records
@@ -136,9 +153,10 @@ def split_session_dirs(
 class _EpisodeCache:
     """LRU cache for decoded and resized episode frames."""
 
-    def __init__(self, image_size: tuple[int, int], max_items: int = 4):
+    def __init__(self, image_size: tuple[int, int], max_items: int = 4, use_masked_video: bool = False):
         self.image_size = image_size
         self.max_items = max_items
+        self.video_filename = "video_masked.mp4" if use_masked_video else "video.mp4"
         self._frames: OrderedDict[Path, list[np.ndarray]] = OrderedDict()
         self._actions: OrderedDict[Path, np.ndarray] = OrderedDict()
 
@@ -150,7 +168,7 @@ class _EpisodeCache:
             self._actions.move_to_end(key)
             return self._frames[key], self._actions[key]
 
-        frames = self._load_frames(record.episode_dir / "video.mp4")
+        frames = self._load_frames(record.episode_dir / self.video_filename)
         actions = self._load_actions(record.episode_dir / "data.parquet")
 
         if len(frames) != len(actions):
@@ -193,17 +211,23 @@ class LoopEpisodeDataset(Dataset):
         val_ratio: float = 0.2,
         seed: int | None = None,
         cache_size: int = 4,
+        tape_color: str | None = None,
+        episode_records: list[EpisodeRecord] | None = None,
+        use_masked_video: bool = False,
     ):
         self.episodes_dir = Path(episodes_dir)
         self.image_size = image_size
         self.history = history
         self.augment = augment
-        self.records = split_sessions(
-            discover_cnn_episodes(self.episodes_dir),
-            split=split,
-            val_ratio=val_ratio,
-            seed=seed,
-        )
+        if episode_records is not None:
+            self.records = list(episode_records)
+        else:
+            self.records = split_sessions(
+                discover_cnn_episodes(self.episodes_dir, tape_color=tape_color),
+                split=split,
+                val_ratio=val_ratio,
+                seed=seed,
+            )
         self.samples: list[SampleIndex] = []
         self.sample_weights: list[float] = []
         for episode_idx, record in enumerate(self.records):
@@ -215,7 +239,7 @@ class LoopEpisodeDataset(Dataset):
         effective_cache_size = cache_size
         if self.records and len(self.records) <= 64:
             effective_cache_size = max(cache_size, len(self.records))
-        self.cache = _EpisodeCache(image_size=image_size, max_items=effective_cache_size)
+        self.cache = _EpisodeCache(image_size=image_size, max_items=effective_cache_size, use_masked_video=use_masked_video)
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -308,6 +332,8 @@ def build_datasets(
     history: int = 3,
     val_ratio: float = 0.2,
     seed: int | None = None,
+    tape_color: str | None = None,
+    use_masked_video: bool = False,
 ) -> tuple[LoopEpisodeDataset, LoopEpisodeDataset]:
     """Create train/val datasets with shared hyperparameters."""
     train_dataset = LoopEpisodeDataset(
@@ -318,6 +344,8 @@ def build_datasets(
         augment=True,
         val_ratio=val_ratio,
         seed=seed,
+        tape_color=tape_color,
+        use_masked_video=use_masked_video,
     )
     val_dataset = LoopEpisodeDataset(
         episodes_dir=episodes_dir,
@@ -327,8 +355,62 @@ def build_datasets(
         augment=False,
         val_ratio=val_ratio,
         seed=seed,
+        tape_color=tape_color,
+        use_masked_video=use_masked_video,
     )
     return train_dataset, val_dataset
+
+
+def build_experiment_datasets(
+    episodes_dir: Path | str,
+    max_white_train_episodes: int | None,
+    image_size: tuple[int, int] = (DEFAULT_IMAGE_WIDTH, DEFAULT_IMAGE_HEIGHT),
+    history: int = DEFAULT_FRAME_HISTORY,
+    val_ratio: float = 0.2,
+    seed: int = 42,
+) -> tuple["LoopEpisodeDataset", "LoopEpisodeDataset", "LoopEpisodeDataset", "LoopEpisodeDataset"]:
+    """Build mixed red+white datasets for generalization sweep experiments.
+
+    The white val holdout is always the full white val split, regardless of how many white
+    train episodes are included. This keeps the evaluation set constant across sweep cells
+    so metrics are comparable.
+
+    Returns:
+        train_ds: red train + up to max_white_train_episodes white train episodes
+        val_ds_all: red val + white val (combined)
+        val_ds_red: red val episodes only
+        val_ds_white: white val episodes only
+    """
+    episodes_dir = Path(episodes_dir)
+
+    red_all = discover_cnn_episodes(episodes_dir, tape_color="red")
+    white_all = discover_cnn_episodes(episodes_dir, tape_color="white")
+
+    red_train = split_sessions(red_all, "train", val_ratio=val_ratio, seed=seed)
+    red_val = split_sessions(red_all, "val", val_ratio=val_ratio, seed=seed)
+    white_train_pool = split_sessions(white_all, "train", val_ratio=val_ratio, seed=seed)
+    white_val = split_sessions(white_all, "val", val_ratio=val_ratio, seed=seed)
+
+    white_train = white_train_pool
+    if max_white_train_episodes is not None and len(white_train_pool) > max_white_train_episodes:
+        rng = random.Random(seed)
+        white_train = rng.sample(white_train_pool, max_white_train_episodes)
+
+    def _make(records: list[EpisodeRecord], augment: bool) -> LoopEpisodeDataset:
+        return LoopEpisodeDataset(
+            episodes_dir=episodes_dir,
+            image_size=image_size,
+            history=history,
+            augment=augment,
+            episode_records=records,
+        )
+
+    return (
+        _make(red_train + white_train, True),
+        _make(red_val + white_val, False),
+        _make(red_val, False),
+        _make(white_val, False),
+    )
 
 
 def stable_worker_seed(worker_id: int) -> int:
