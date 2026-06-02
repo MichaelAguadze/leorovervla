@@ -160,7 +160,7 @@ Train from the CNN episode root:
 
 ```bash
 python -m cnn_policy.train \
-  --episodes-dir data/leorover_cnn/episodes \
+  --episodes-dir data/leorover_cnn_red/episodes \
   --run-dir runs/cnn_v1
 ```
 
@@ -170,7 +170,7 @@ Evaluate a trained checkpoint:
 
 ```bash
 python -m cnn_policy.eval \
-  --episodes-dir data/leorover_cnn/episodes \
+  --episodes-dir data/leorover_cnn_red/episodes \
   --checkpoint <RUN_DIR>/checkpoints/best.pt
 ```
 

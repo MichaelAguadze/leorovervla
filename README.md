@@ -158,7 +158,7 @@ Then train from the CNN episode root:
 
 ```bash
 python -m cnn_policy.train \
-  --episodes-dir data/leorover_cnn/episodes \
+  --episodes-dir data/leorover_cnn_red/episodes \
   --run-dir runs/cnn_v1
 ```
 
@@ -168,7 +168,7 @@ Evaluate a checkpoint:
 
 ```bash
 python -m cnn_policy.eval \
-  --episodes-dir data/leorover_cnn/episodes \
+  --episodes-dir data/leorover_cnn_red/episodes \
   --checkpoint <RUN_DIR>/checkpoints/best.pt
 ```
 
@@ -292,8 +292,8 @@ Laptop:
 python -m client
 python -m client.cli --robot-ip <ROBOT_IP>
 python -m client.teleop --robot-ip <ROBOT_IP>
-python -m cnn_policy.train --episodes-dir data/leorover_cnn/episodes --run-dir runs/cnn_v1
-python -m cnn_policy.eval --episodes-dir data/leorover_cnn/episodes --checkpoint <FILE>
+python -m cnn_policy.train --episodes-dir data/leorover_cnn_red/episodes --run-dir runs/cnn_v1
+python -m cnn_policy.eval --episodes-dir data/leorover_cnn_red/episodes --checkpoint <FILE>
 python -m cnn_policy.drive --robot-ip <ROBOT_IP> --checkpoint <FILE>
 python scripts/upload_hf_session.py
 python scripts/inspect_episode.py --episodes-dir data/leorover_nav/episodes

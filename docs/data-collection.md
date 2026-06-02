@@ -214,7 +214,7 @@ python scripts/export_lerobot.py \
 CNN data is intentionally separate from VLA data:
 
 ```text
-data/leorover_cnn/
+data/leorover_cnn_red/
 ```
 
 Install the CNN extras:
@@ -227,7 +227,7 @@ Train:
 
 ```bash
 python -m cnn_policy.train \
-  --episodes-dir data/leorover_cnn/episodes \
+  --episodes-dir data/leorover_cnn_red/episodes \
   --run-dir runs/cnn_v1
 ```
 
@@ -235,7 +235,7 @@ Evaluate:
 
 ```bash
 python -m cnn_policy.eval \
-  --episodes-dir data/leorover_cnn/episodes \
+  --episodes-dir data/leorover_cnn_red/episodes \
   --checkpoint <RUN_DIR>/checkpoints/best.pt
 ```
 

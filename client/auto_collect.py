@@ -31,7 +31,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # Dataset
     ds = p.add_argument_group("dataset")
-    ds.add_argument("--dataset",  default="leorover_cnn",
+    ds.add_argument("--dataset",  default="leorover_cnn_red",
                     help="Dataset name (subdirectory under --data-dir)")
     ds.add_argument("--data-dir", default="data")
     ds.add_argument("--episodes", type=int, default=20,
@@ -141,6 +141,7 @@ def main() -> None:
         line_lost_tolerance_s=args.line_lost_tolerance,
         detector=detector,
         controller=controller,
+        tape_color=args.tape_color,
     )
     session.run()
 

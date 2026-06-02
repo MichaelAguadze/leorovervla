@@ -51,6 +51,7 @@ class AutoCollectSession:
         line_lost_tolerance_s: float = 3.0,
         detector: LineDetector | None = None,
         controller: LinePDController | None = None,
+        tape_color: str = "red",
     ):
         self.config = config
         self.direction = direction
@@ -62,6 +63,7 @@ class AutoCollectSession:
         self.arm_delay_s = arm_delay_s
         self.line_lost_tolerance_s = line_lost_tolerance_s
 
+        self.tape_color = tape_color
         self.detector = detector or LineDetector()
         self.controller = controller or LinePDController(max_duty=config.max_duty)
 
@@ -279,6 +281,7 @@ class AutoCollectSession:
             "episode_definition": "one_full_lap_auto_accept",
             "collection_style": "clean_lap",
             "collector": "auto_cv_pd",
+            "tape_color": self.tape_color,
             "observation_state_semantics": "previous_action_normalized",
             "action_semantics": "current_action_normalized",
             "accepted_episode_timestamps": "episode_relative_seconds",
@@ -301,6 +304,7 @@ class AutoCollectSession:
             "track_layout": "user_defined",
             "episode_definition": "one_full_lap_auto_accept",
             "collection_style": "clean_lap",
+            "tape_color": self.tape_color,
             "task_name": episode.task,
             "task_index": episode.task_index,
             "num_frames": len(episode.frames),

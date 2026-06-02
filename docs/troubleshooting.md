@@ -81,7 +81,7 @@ That warning means training can still run, but true validation is skipped becaus
 
 Fix:
 
-- collect at least one more `session_YYYYMMDD_HHMMSS` under `data/leorover_cnn/episodes/`
+- collect at least one more `session_YYYYMMDD_HHMMSS` under `data/leorover_cnn_red/episodes/`
 - then train from the full CNN episodes root instead of one specific session folder
 
 ## LeRobot export fails

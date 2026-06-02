@@ -5,7 +5,7 @@ from __future__ import annotations
 DEFAULT_IMAGE_WIDTH = 160
 DEFAULT_IMAGE_HEIGHT = 120
 DEFAULT_FRAME_HISTORY = 3
-DEFAULT_DATA_ROOT = "data/leorover_cnn/episodes"
+DEFAULT_DATA_ROOT = "data/leorover_cnn_red/episodes"
 LEGACY_DATA_ROOT = "data/leorover_cnn_loop/episodes"
 
 from .model import LoopCNNModel  # noqa: E402

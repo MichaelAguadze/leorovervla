@@ -12,7 +12,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--robot-port", type=int, default=8081)
     parser.add_argument("--dataset", default="leorover_nav",
                         help="Dataset name for the VLA recorder")
-    parser.add_argument("--cnn-dataset", default="leorover_cnn",
+    parser.add_argument("--cnn-dataset", default="leorover_cnn_red",
                         help="Dataset name for the CNN recorder")
     parser.add_argument("--repo-id", default="<HF_DATASET_REPO>")
     parser.add_argument("--fps", type=int, default=10)
