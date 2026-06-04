@@ -6,16 +6,16 @@
 <title>LeRover VLA — NCAT Research</title>
 <style>
   :root {
-    --bg: #080d18;
-    --surface: #0e1628;
-    --surface2: #141e35;
-    --border: #1e2d4d;
-    --blue: #3b7eff;
-    --blue-dim: #1e40af;
-    --cyan: #22d3ee;
-    --text: #e2e8f0;
-    --muted: #7d8fa8;
-    --code-bg: #0a1020;
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface2: #eef1f6;
+    --border: #d8dfe8;
+    --blue: #2563eb;
+    --blue-dim: #3b82f6;
+    --cyan: #0891b2;
+    --text: #0f172a;
+    --muted: #64748b;
+    --code-bg: #1e2433;
     --radius: 12px;
   }
 
@@ -36,7 +36,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(8,13,24,0.85);
+    background: rgba(245,247,250,0.88);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     padding: 0 5%;
@@ -87,7 +87,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,126,255,.18) 0%, transparent 70%);
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(37,99,235,.10) 0%, transparent 70%);
     pointer-events: none;
   }
   .hero-badge {
@@ -417,7 +417,7 @@
     overflow-x: auto;
     font-size: 13px;
     line-height: 1.65;
-    color: #a8c0e8;
+    color: #c9d8f0;
     font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
   }
   .c-comment { color: #4a6080; }
@@ -436,7 +436,7 @@
 
   /* ── FOOTER ── */
   footer {
-    background: var(--surface);
+    background: var(--surface2);
     border-top: 1px solid var(--border);
     padding: 40px 5%;
     text-align: center;
@@ -472,7 +472,7 @@
     overflow: hidden;
     border-radius: 16px;
     border: 1px solid var(--border);
-    box-shadow: 0 0 60px rgba(59,126,255,.15);
+    box-shadow: 0 4px 40px rgba(37,99,235,.12);
     margin-top: 36px;
   }
   .video-wrapper iframe {
