@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeRover VLA — NCAT Research</title>
+<style>
+  :root {
+    --bg: #080d18;
+    --surface: #0e1628;
+    --surface2: #141e35;
+    --border: #1e2d4d;
+    --blue: #3b7eff;
+    --blue-dim: #1e40af;
+    --cyan: #22d3ee;
+    --text: #e2e8f0;
+    --muted: #7d8fa8;
+    --code-bg: #0a1020;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(8,13,24,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 5%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+  }
+  .nav-brand {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .nav-brand span { color: var(--blue); }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    font-size: 13.5px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    background: var(--blue);
+    color: #fff !important;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: opacity .2s !important;
+  }
+  .nav-cta:hover { opacity: .85; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 5% 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(59,126,255,.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(59,126,255,.12);
+    border: 1px solid rgba(59,126,255,.3);
+    border-radius: 99px;
+    padding: 5px 14px;
+    font-size: 12.5px;
+    color: var(--blue);
+    font-weight: 600;
+    letter-spacing: .5px;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-size: clamp(38px, 7vw, 72px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -1.5px;
+    margin-bottom: 24px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    font-size: clamp(16px, 2.5vw, 20px);
+    color: var(--muted);
+    max-width: 640px;
+    margin: 0 auto 40px;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity .2s, transform .2s;
+  }
+  .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background .2s, transform .2s;
+  }
+  .btn-secondary:hover { background: #1a2744; transform: translateY(-1px); }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 64px;
+    width: 100%;
+    max-width: 760px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--blue);
+    letter-spacing: -1px;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+  }
+
+  /* ── SECTION ── */
+  section {
+    padding: 80px 5%;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: clamp(26px, 4vw, 40px);
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    line-height: 1.15;
+    margin-bottom: 16px;
+  }
+  .section-desc {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 600px;
+    margin-bottom: 48px;
+  }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .pipeline-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    position: relative;
+    transition: border-color .2s, transform .2s;
+  }
+  .pipeline-step:hover { border-color: var(--blue-dim); transform: translateY(-3px); }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    background: rgba(59,126,255,.15);
+    border: 1px solid rgba(59,126,255,.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blue);
+    margin-bottom: 16px;
+  }
+  .pipeline-step h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .pipeline-step p {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── ARCHITECTURE ── */
+  .arch-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px;
+    overflow-x: auto;
+  }
+  .arch-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    min-width: 600px;
+  }
+  .arch-block {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 14px;
+    text-align: center;
+    position: relative;
+  }
+  .arch-block.highlight { border-color: var(--blue-dim); background: rgba(59,126,255,.08); }
+  .arch-block-title { font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .6px; }
+  .arch-block-body { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+  .arch-arrow {
+    width: 32px;
+    flex-shrink: 0;
+    text-align: center;
+    color: var(--border);
+    font-size: 18px;
+  }
+  .arch-sub {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .arch-note {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .arch-note strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  /* ── FEATURES GRID ── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    transition: border-color .2s, transform .2s;
+  }
+  .feature-card:hover { border-color: var(--blue-dim); transform: translateY(-2px); }
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(59,126,255,.12);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+  .feature-card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .feature-card p {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── RESEARCH QUESTIONS ── */
+  .rq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 12px;
+  }
+  .rq-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    display: flex;
+    gap: 14px;
+    transition: border-color .2s;
+  }
+  .rq-card:hover { border-color: rgba(59,126,255,.35); }
+  .rq-badge {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--blue);
+    background: rgba(59,126,255,.1);
+    border: 1px solid rgba(59,126,255,.2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    height: fit-content;
+    letter-spacing: .5px;
+  }
+  .rq-text {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .rq-text strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 14px; }
+
+  .rq-section-header {
+    margin: 36px 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .rq-section-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── CODE ── */
+  .code-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .code-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .code-tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .code-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .code-panel { display: none; }
+  .code-panel.active { display: block; }
+  pre {
+    background: var(--code-bg);
+    padding: 24px 28px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #a8c0e8;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  }
+  .c-comment { color: #4a6080; }
+  .c-cmd { color: #7dd3fc; }
+  .c-flag { color: #a78bfa; }
+  .c-val { color: #86efac; }
+  .c-section { color: var(--cyan); font-weight: 700; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 40px 5%;
+    text-align: center;
+  }
+  .footer-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  .footer-top a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    transition: color .2s;
+  }
+  .footer-top a:hover { color: var(--text); }
+  footer p { font-size: 13px; color: var(--muted); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .arch-sub { grid-template-columns: 1fr; }
+    .hero h1 { letter-spacing: -.5px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-brand">LeRover <span>VLA</span></a>
+  <div class="nav-links">
+    <a href="#pipeline">Pipeline</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#research">Research</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="https://github.com/MichaelAguadze/leorovervla" class="nav-cta">GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">NCAT Research &nbsp;·&nbsp; Spring 2026</div>
+  <h1>VLA Research on a<br><em>Holonomic Robot</em></h1>
+  <p class="hero-sub">
+    A full data-collection and training stack for the LeRover mecanum robot —
+    from keyboard teleoperation to CNN baselines and LeRobot-compatible VLA fine-tuning.
+  </p>
+  <div class="hero-actions">
+    <a href="#quickstart" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Get Started
+    </a>
+    <a href="https://github.com/MichaelAguadze/leorovervla" class="btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.419 2.865 8.166 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+
+  <div class="hero-grid">
+    <div class="stat-card">
+      <div class="stat-num">3-DOF</div>
+      <div class="stat-label">Holonomic Action</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">10 Hz</div>
+      <div class="stat-label">Control Rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">17+</div>
+      <div class="stat-label">Research Questions</div>
+    </div>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <div class="section-label">How It Works</div>
+  <h2 class="section-title">End-to-end research pipeline</h2>
+  <p class="section-desc">
+    Collect clean demonstrations, train a CNN or VLA policy, and deploy back to the robot
+    — all from the same codebase.
+  </p>
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="step-num">01</div>
+      <h3>Connect the Robot</h3>
+      <p>Join the robot hotspot for first-time setup, move both devices onto shared Wi-Fi, then SSH normally for the rest of the project.</p>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">02</div>
+      <h3>Record Episodes</h3>
+      <p>Drive the robot with keyboard or PS5 gamepad. Each accepted lap is saved as a timestamped episode with video, parquet actions, and metadata.</p>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">03</div>
+      <h3>Auto-Collect with CV</h3>
+      <p>Run the autonomous collector: a PD controller follows the tape line and accepts full laps automatically, scaling up dataset size without manual driving.</p>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">04</div>
+      <h3>Train CNN Baseline</h3>
+      <p>Train a configurable 4-block CNN on stacked frames. Supports tape-color filtering, fine-tuning, and color-generalization sweep experiments.</p>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">05</div>
+      <h3>Export to LeRobot</h3>
+      <p>One command converts the episode folder to a LeRobot-compatible dataset ready for VLA fine-tuning with OpenVLA, π₀, or similar models.</p>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">06</div>
+      <h3>Deploy Policy</h3>
+      <p>Load a trained checkpoint and run closed-loop inference. The laptop streams velocity commands to the robot server over Wi-Fi at 10 Hz.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-label">CNN Baseline</div>
+  <h2 class="section-title">Configurable policy architecture</h2>
+  <p class="section-desc">
+    The CNN policy maps stacked camera frames directly to body velocity commands
+    (v<sub>x</sub>, v<sub>y</sub>, ω) with no language conditioning.
+  </p>
+
+  <div class="arch-diagram">
+    <div class="arch-flow">
+      <div class="arch-block">
+        <div class="arch-block-title">Input</div>
+        <div class="arch-block-body">3 × RGB frames<br>stacked · 160×120<br>9 channels total</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block highlight">
+        <div class="arch-block-title">Encoder</div>
+        <div class="arch-block-body">4× Conv-BN-ReLU<br>[32, 64, 128, 128]<br>AdaptiveAvgPool</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block">
+        <div class="arch-block-title">MLP Head</div>
+        <div class="arch-block-body">Flatten<br>Linear 128→64→32<br>Dropout · ReLU</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-block highlight">
+        <div class="arch-block-title">Output</div>
+        <div class="arch-block-body">v<sub>x</sub>, v<sub>y</sub>, ω<br>Tanh normalized<br>action dim = 3</div>
+      </div>
+    </div>
+
+    <div class="arch-sub">
+      <div class="arch-note">
+        <strong>Configurable depth &amp; width</strong>
+        <code>encoder_channels</code> and <code>head_hidden_sizes</code> are first-class config fields — sweep different architectures without code changes.
+      </div>
+      <div class="arch-note">
+        <strong>Backward-compatible checkpoints</strong>
+        The loader infers architecture from the state dict, so older checkpoints load correctly even as the config schema evolves.
+      </div>
+      <div class="arch-note">
+        <strong>Color-generalization experiments</strong>
+        Train on red tape, fine-tune on white tape with frozen early blocks. The sweep script varies the number of white episodes and reports per-color validation loss.
+      </div>
+      <div class="arch-note">
+        <strong>Colab training</strong>
+        A ready-to-run Colab notebook uploads data from Drive, trains on T4 GPU, and saves best checkpoints back to Drive for download.
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FEATURES -->
+<section>
+  <div class="section-label">What's Included</div>
+  <h2 class="section-title">Everything in one repo</h2>
+  <p class="section-desc">No dashboard, no black boxes — just a clean, scriptable stack you can understand and extend.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>Robot Server</h3>
+      <p>Lightweight Flask server exposing camera, velocity, servo, and health endpoints. Runs on the LeRover's Raspberry Pi.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎮</div>
+      <h3>Teleop Client</h3>
+      <p>Keyboard and PS5 gamepad teleoperation with live camera feed. Gamepad gives analog inputs for smoother demonstrations.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🚗</div>
+      <h3>Autonomous Collector</h3>
+      <p>CV-based PD line follower that drives full laps unattended, with automatic episode acceptance and corner-handling tuning.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>CNN Policy</h3>
+      <p>Train, evaluate, and deploy a CNN policy that maps stacked frames to velocity commands. Fully configurable architecture.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📦</div>
+      <h3>LeRobot Export</h3>
+      <p>One-command conversion to LeRobot v3 format — ready for OpenVLA, π₀, or any HuggingFace-compatible VLA fine-tuning pipeline.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">☁️</div>
+      <h3>Hugging Face Upload</h3>
+      <p>Interactive uploader that lists sessions, shows episode counts, and pushes a selected session to a HF dataset repo.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Training Logs</h3>
+      <p>Per-epoch JSON summaries with train/val loss, per-color metrics, and checkpoint history. Easy to plot with the Colab notebook.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔬</div>
+      <h3>Segmentation Support</h3>
+      <p>Optional video masking pipeline to strip background pixels and train on segmented frames for visual robustness experiments.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- RESEARCH QUESTIONS -->
+<section id="research">
+  <div class="section-label">Open Problems</div>
+  <h2 class="section-title">Research questions</h2>
+  <p class="section-desc">
+    Seventeen concrete questions grounded in the LeRover's 3-DOF holonomic drive,
+    camera-only observations, and LeRobot-compatible infrastructure.
+  </p>
+
+  <div class="rq-section-header">Action Space &amp; Control</div>
+  <div class="rq-grid">
+    <div class="rq-card">
+      <div class="rq-badge">Q1</div>
+      <div class="rq-text">
+        <strong>Body velocity vs. raw wheel duties</strong>
+        Does predicting (v<sub>x</sub>, v<sub>y</sub>, ω) outperform predicting raw wheel duties? The server supports both endpoints for a direct comparison.
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q2</div>
+      <div class="rq-text">
+        <strong>3-DOF data efficiency</strong>
+        Does the holonomic action space require significantly more demonstrations than a 2-DOF differential robot for the same task?
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q3</div>
+      <div class="rq-text">
+        <strong>Strafe for fine corrections</strong>
+        Can a VLA learn to exploit strafing for precise lateral adjustments that a non-holonomic robot physically cannot perform?
+      </div>
+    </div>
+  </div>
+
+  <div class="rq-section-header">Data Efficiency</div>
+  <div class="rq-grid">
+    <div class="rq-card">
+      <div class="rq-badge">Q4</div>
+      <div class="rq-text">
+        <strong>Minimum demonstrations</strong>
+        What is the minimum number of demonstrations for a reliable loop-following policy? Sweep N ∈ {5, 10, 20, 50} with the <code>--episodes</code> flag.
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q5</div>
+      <div class="rq-text">
+        <strong>Gamepad vs. keyboard data quality</strong>
+        Do smooth analog gamepad trajectories produce better policies than discrete keyboard inputs?
+      </div>
+    </div>
+  </div>
+
+  <div class="rq-section-header">Language Generalization</div>
+  <div class="rq-grid">
+    <div class="rq-card">
+      <div class="rq-badge">Q6</div>
+      <div class="rq-text">
+        <strong>Instruction paraphrase transfer</strong>
+        Does a VLA fine-tuned on LeRover data transfer across semantically equivalent instructions without additional data?
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q7</div>
+      <div class="rq-text">
+        <strong>Cross-room transfer with language</strong>
+        Does language conditioning improve cross-room generalization compared with image-only conditioning?
+      </div>
+    </div>
+  </div>
+
+  <div class="rq-section-header">Visual Robustness</div>
+  <div class="rq-grid">
+    <div class="rq-card">
+      <div class="rq-badge">Q8</div>
+      <div class="rq-text">
+        <strong>Lighting &amp; camera drift</strong>
+        How sensitive is the policy to lighting changes and small camera angle drift? The fixed CSI camera enables controlled experiments.
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q9</div>
+      <div class="rq-text">
+        <strong>Landmark dependence</strong>
+        Does the policy rely on specific visual landmarks? Occlude them and test whether degradation is graceful or catastrophic.
+      </div>
+    </div>
+  </div>
+
+  <div class="rq-section-header">Foundation Model Fine-Tuning</div>
+  <div class="rq-grid">
+    <div class="rq-card">
+      <div class="rq-badge">Q10</div>
+      <div class="rq-text">
+        <strong>Pre-trained VLA data efficiency</strong>
+        How many LeRover demonstrations does a pre-trained VLA (OpenVLA, π₀) need before it outperforms a CNN trained from scratch?
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q11</div>
+      <div class="rq-text">
+        <strong>Mecanum action space transfer</strong>
+        Does a pre-trained VLA generalize to the novel 3-DOF holonomic output without explicit action-space adaptation?
+      </div>
+    </div>
+  </div>
+
+  <div class="rq-section-header">Temporal Modeling · Dataset Quality · Deployment</div>
+  <div class="rq-grid">
+    <div class="rq-card">
+      <div class="rq-badge">Q12</div>
+      <div class="rq-text">
+        <strong>Observation history</strong>
+        How many frames of history does the policy need? Compare 1-frame, 3-frame, and 5-frame stacked input at 10 Hz.
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q13</div>
+      <div class="rq-text">
+        <strong>Action conditioning</strong>
+        Does adding the previous action as input improve motion smoothness? The <code>shifted_action</code> state source can be ablated at training time.
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q14</div>
+      <div class="rq-text">
+        <strong>Accept/discard discipline</strong>
+        Does the episode accept/discard workflow during recording measurably affect final policy performance?
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q15</div>
+      <div class="rq-text">
+        <strong>Direction balance</strong>
+        Does recording equal clockwise and counterclockwise loops improve rotation generalization?
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q16</div>
+      <div class="rq-text">
+        <strong>Real-time inference budget</strong>
+        What is the maximum model size that sustains 10 Hz inference over Wi-Fi within the round-trip latency budget?
+      </div>
+    </div>
+    <div class="rq-card">
+      <div class="rq-badge">Q17</div>
+      <div class="rq-text">
+        <strong>Quantization on-device</strong>
+        Does INT8/FP16 quantization of a fine-tuned VLA preserve task success on the LeRover?
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- QUICK START -->
+<section id="quickstart">
+  <div class="section-label">Get Started</div>
+  <h2 class="section-title">Up and running in minutes</h2>
+  <p class="section-desc">The laptop does everything — recording, training, and deployment. The robot only runs a small HTTP server.</p>
+
+  <div class="code-section">
+    <div class="code-tabs">
+      <div class="code-tab active" onclick="switchTab(this,'setup')">Setup</div>
+      <div class="code-tab" onclick="switchTab(this,'collect')">Collect</div>
+      <div class="code-tab" onclick="switchTab(this,'train')">Train</div>
+      <div class="code-tab" onclick="switchTab(this,'deploy')">Deploy</div>
+    </div>
+
+    <div class="code-panel active" id="tab-setup">
+<pre><span class="c-comment"># 1. Clone and install laptop dependencies</span>
+<span class="c-cmd">git clone</span> https://github.com/MichaelAguadze/leorovervla.git
+<span class="c-cmd">cd</span> leorovervla
+<span class="c-cmd">python3 -m venv</span> .venv <span class="c-flag">&amp;&amp;</span> <span class="c-cmd">source</span> .venv/bin/activate
+<span class="c-cmd">pip install</span> <span class="c-flag">-r</span> requirements-laptop.txt
+
+<span class="c-comment"># 2. Deploy server to the robot (SSH must be set up)</span>
+<span class="c-cmd">bash</span> scripts/deploy_server.sh <span class="c-val">deps</span>
+<span class="c-cmd">bash</span> scripts/deploy_server.sh <span class="c-val">start</span>
+
+<span class="c-comment"># 3. Install CNN training extras</span>
+<span class="c-cmd">pip install</span> <span class="c-flag">-r</span> requirements-cnn.txt</pre>
+    </div>
+
+    <div class="code-panel" id="tab-collect">
+<pre><span class="c-comment"># Manual teleoperation (keyboard or gamepad)</span>
+<span class="c-cmd">python -m client.cli</span> <span class="c-flag">--robot-ip</span> <span class="c-val">&lt;ROBOT_IP&gt;</span>
+<span class="c-comment"># choose CNN-based → dataset recording in the launcher</span>
+
+<span class="c-comment"># Autonomous CV collection (hands-free)</span>
+<span class="c-cmd">python -m client.auto_collect</span> \
+  <span class="c-flag">--robot-ip</span>  <span class="c-val">&lt;ROBOT_IP&gt;</span>  \
+  <span class="c-flag">--dataset</span>   <span class="c-val">leorover_cnn_red</span> \
+  <span class="c-flag">--episodes</span>  <span class="c-val">20</span>  \
+  <span class="c-flag">--tape-color</span> <span class="c-val">red</span>
+
+<span class="c-comment"># Episodes are saved to:</span>
+<span class="c-comment">#   data/leorover_cnn_red/episodes/session_YYYYMMDD_*/episode_*/</span></pre>
+    </div>
+
+    <div class="code-panel" id="tab-train">
+<pre><span class="c-comment"># Train the CNN baseline (auto-picks MPS on Apple Silicon)</span>
+<span class="c-cmd">python -m loop_cnn.train</span> \
+  <span class="c-flag">--episodes-dir</span> <span class="c-val">data/leorover_cnn_red/episodes</span> \
+  <span class="c-flag">--run-dir</span>      <span class="c-val">runs/cnn_v1</span> \
+  <span class="c-flag">--num-workers</span>  <span class="c-val">2</span>
+
+<span class="c-comment"># Evaluate a saved checkpoint</span>
+<span class="c-cmd">python -m loop_cnn.eval</span> \
+  <span class="c-flag">--episodes-dir</span> <span class="c-val">data/leorover_cnn_red/episodes</span> \
+  <span class="c-flag">--checkpoint</span>   <span class="c-val">runs/cnn_v1/run_&lt;DATE&gt;/checkpoints/best.pt</span>
+
+<span class="c-comment"># Export to LeRobot format for VLA fine-tuning</span>
+<span class="c-cmd">python scripts/export_lerobot.py</span> \
+  <span class="c-flag">--episodes-dir</span> <span class="c-val">data/leorover_nav/episodes</span> \
+  <span class="c-flag">--output-dir</span>   <span class="c-val">data/leorover_nav/lerobot</span> \
+  <span class="c-flag">--repo-id</span>      <span class="c-val">&lt;HF_USERNAME&gt;/&lt;DATASET_NAME&gt;</span></pre>
+    </div>
+
+    <div class="code-panel" id="tab-deploy">
+<pre><span class="c-comment"># Run the trained CNN policy on the robot</span>
+<span class="c-cmd">python -m loop_cnn.drive</span> \
+  <span class="c-flag">--robot-ip</span>   <span class="c-val">&lt;ROBOT_IP&gt;</span> \
+  <span class="c-flag">--checkpoint</span> <span class="c-val">runs/cnn_v1/run_&lt;DATE&gt;/checkpoints/best.pt</span>
+
+<span class="c-comment"># Upload a recorded session to Hugging Face</span>
+<span class="c-cmd">python scripts/upload_hf_session.py</span>
+<span class="c-comment"># interactive picker — select session, upload to HF dataset repo</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <a href="https://github.com/MichaelAguadze/leorovervla">GitHub</a>
+    <a href="getting-started.md">Getting Started</a>
+    <a href="cnn.md">CNN Guide</a>
+    <a href="data-collection.md">Data Collection</a>
+    <a href="troubleshooting.md">Troubleshooting</a>
+  </div>
+  <p>NCAT Research &nbsp;·&nbsp; Spring 2026 &nbsp;·&nbsp; LeRover VLA</p>
+</footer>
+
+<script>
+  function switchTab(el, id) {
+    document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.code-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-' + id).classList.add('active');
+  }
+</script>
+
+</body>
+</html>
